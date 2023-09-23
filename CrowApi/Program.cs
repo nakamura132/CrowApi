@@ -18,7 +18,7 @@ builder.Logging.AddSimpleConsole();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if ( app.Environment.IsDevelopment() )
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -30,4 +30,22 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+if ( app.Environment.IsDevelopment() )
+{
+    app.MapGet( "/endpoints", (IEnumerable<EndpointDataSource> endpoints) =>
+    {
+        // エンドポイントの一覧を取得し、レスポンスとして返す
+        var endpointsList = endpoints
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Select(endpoint => new
+            {
+                endpoint.DisplayName,
+                endpoint.RoutePattern.RawText,
+                endpoint.RoutePattern.RequiredValues,
+                endpoint.RoutePattern.Defaults
+            });
+        return Results.Json( endpointsList );
+    } );
+}
 app.Run();

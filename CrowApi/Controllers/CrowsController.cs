@@ -22,6 +22,7 @@ namespace CrowApi.Controllers
         /// </summary>
         /// <param name="logger">DIされたロギングサービス</param>
         /// <param name="configuration">DIされた構成情報サービス</param>
+        /// <param name="fileService">DIされたファイルサービス</param>
         public CrowsController(
             ILogger<CrowsController> logger,
             IConfiguration configuration,
