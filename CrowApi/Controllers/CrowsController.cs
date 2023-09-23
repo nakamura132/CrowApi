@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CrowApi.Models;
+using CrowApi.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -13,6 +15,7 @@ namespace CrowApi.Controllers
     {
         private readonly ILogger<CrowsController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IFileService _fileService;
 
         /// <summary>
         /// コンストラクタ
@@ -21,15 +24,17 @@ namespace CrowApi.Controllers
         /// <param name="configuration">DIされた構成情報サービス</param>
         public CrowsController(
             ILogger<CrowsController> logger,
-            IConfiguration configuration )
+            IConfiguration configuration,
+            IFileService fileService)
         {
             _logger = logger;
             _configuration = configuration;
+            _fileService = fileService;
         }
 
         [HttpPost]
-        //[Route(nameof(UploadFilesAsync))]
         [DisableFormValueModelBinding]
+        [DisableRequestSizeLimit]
         public async Task<IActionResult> UploadFilesAsync()
         {
             var request = HttpContext.Request;
@@ -48,7 +53,7 @@ namespace CrowApi.Controllers
 
             int fileCount = 0;
             long totalSizeInBytes = 0;
-            var filePaths = new List<string>();
+            var uploadedFiles = new List<string>();
             var notUploadedFiles = new List<string>();
 
             do
@@ -66,56 +71,8 @@ namespace CrowApi.Controllers
                      && contentDisposition.DispositionType.Equals("form-data")
                      && !string.IsNullOrEmpty(contentDisposition.FileName.Value) )
                 {
-                    // Get the temporary folder, and combine a random file name with it
-                    //var fileName = Path.GetRandomFileName();
-                    var fileName = contentDisposition.FileName.Value;
-                    // ファイル保存用ディレクトリ情報を取得
-                    var saveDirectoryName = _configuration.GetValue<string>("CustomConfig:UploadedFilesContainerRoot:Name");
-                    if( string.IsNullOrEmpty(saveDirectoryName))
-                    {
-                        // ファイル保存用ディレクトリ情報を取得できない
-                        _logger.LogInformation("the configuration of directory for saving files is not found.");
-                        throw new Exception("内部サーバーエラー: the configuration of directory for saving files is not found.");
-                    }
-                    // ファイル保存用ディレクトリの存在確認
-                    if( false == Path.Exists(saveDirectoryName) )
-                    {
-                        var createDirectoryIfNotExists = _configuration.GetValue<bool>("CustomConfig:UploadedFilesContainerRoot:CreateIfNotExists", false);
-                        if(  createDirectoryIfNotExists )
-                        {
-                            try
-                            {
-                                _logger.LogInformation($"create a directory for saving files. : {saveDirectoryName}");
-                                Directory.CreateDirectory(saveDirectoryName);
-                            }
-                            catch ( Exception ex)
-                            {
-                                _logger.LogError($"couldn't create a directory for saving files. : {ex}");
-                                // ファイル保存用ディレクトリを作成できない場合
-                                // このコントローラーは例外をスローし、例外処理ハンドラーミドルウェアがキャッチして例外処理を行う
-                                // 例外処理ハンドラーは最終的にサーバーエラー (503) を返す
-                                //
-                                // *** 例外再スローの注意点   正しい : throw;   良くない : throw ex;   ⇒スタックトレースがリセットされてしまう ***
-                                throw;
-                            }
-                        }
-                        else
-                        {
-                            // ファイル保存用ディレクトリの作成が禁止されている
-                            _logger.LogError("prohibited to create a directory for saving files.");
-                            throw new Exception("内部サーバーエラー: prohibited to create a directory for saving files.");
-                        }
-                    }
-                    var saveToPath = Path.Combine(saveDirectoryName, fileName);
-
-                    // await using を使用するとリソース破棄を非同期に行う
-                    await using var targetStream = System.IO.File.Create(saveToPath);
-                    // 非同期ファイル保存
-                    await section.Body.CopyToAsync(targetStream);
-                    _logger.LogInformation($"completed uploading file {fileName} to {saveToPath}");
-
-                    totalSizeInBytes = section.Body.Length;
-                    filePaths.Add(saveToPath);
+                    totalSizeInBytes += await _fileService.SaveFileAsync( section.Body, contentDisposition.FileName.Value );
+                    uploadedFiles.Add( contentDisposition.FileName.Value );
                     fileCount++;
                 }
                 else
@@ -130,26 +87,10 @@ namespace CrowApi.Controllers
             {
                 TotalFilesUploaded = fileCount,
                 TotalSizeUploaded = totalSizeInBytes.ToString(),
-                FilePaths = filePaths,
+                UploadedFiles = uploadedFiles,
                 NotUploadedFiles = notUploadedFiles
             };
             return Created(nameof(CrowsController), fileUploadSummary);
-        }
-
-        private async Task<long> SaveFileAsync( MultipartSection section, string subDirectory )
-        {
-            // if subDirectory is null then assign string.Empty to subDirectory
-            subDirectory ??= string.Empty;
-            var target = Path.Combine("{root}", subDirectory);
-            Directory.CreateDirectory(target);
-
-            var fileSection = section.AsFileSection();
-
-            var filePath = Path.Combine(target, fileSection.FileName);
-            await using var localFileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await fileSection.FileStream.CopyToAsync(localFileStream);
-
-            return fileSection.FileStream.Length;
         }
     }
 }

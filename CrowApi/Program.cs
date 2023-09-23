@@ -1,3 +1,5 @@
+using CrowApi.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,7 +9,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Logging
+// Add file service.
+builder.Services.AddScoped<IFileService, FileService>();
+
+// Add logging component.
 builder.Logging.AddSimpleConsole();
 
 var app = builder.Build();
