@@ -7,6 +7,9 @@ using static System.Collections.Specialized.BitVector32;
 
 namespace CrowApi.Services
 {
+    /// <summary>
+    /// ローカルファイルストレージへの操作を担当するサービス
+    /// </summary>
     public class FileService : IFileService
     {
         ILogger<FileService> _logger;
@@ -52,7 +55,7 @@ namespace CrowApi.Services
                     }
                     catch ( Exception ex )
                     {
-                        _logger.LogError( $"couldn't create a directory for saving files. : {ex}" );
+                        _logger.LogError( $"failed to create a directory for saving files. : {ex}" );
                         // ファイル保存用ディレクトリを作成できない場合
                         // このコントローラーは例外をスローし、例外処理ハンドラーミドルウェアがキャッチして例外処理を行う
                         // 例外処理ハンドラーは最終的にサーバーエラー (503) を返す

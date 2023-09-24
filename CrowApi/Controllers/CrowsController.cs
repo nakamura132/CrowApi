@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace CrowApi.Controllers
 {
+    /// <summary>
+    /// Crows エンドポイントへの全ての動作を定義します
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class CrowsController : ControllerBase
@@ -20,9 +23,9 @@ namespace CrowApi.Controllers
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        /// <param name="logger">DIされたロギングサービス</param>
-        /// <param name="configuration">DIされた構成情報サービス</param>
-        /// <param name="fileService">DIされたファイルサービス</param>
+        /// <param name="logger">DIされるロギングサービス</param>
+        /// <param name="configuration">DIされる構成情報サービス</param>
+        /// <param name="fileService">DIされるファイルサービス</param>
         public CrowsController(
             ILogger<CrowsController> logger,
             IConfiguration configuration,
@@ -33,6 +36,11 @@ namespace CrowApi.Controllers
             _fileService = fileService;
         }
 
+        /// <summary>
+        /// ファイルをアップロードします
+        /// </summary>
+        /// <returns></returns>
+        /// <remarks>HTTPヘッダーの Content-Type が multipart/form-data の場合のみ有効です</remarks>
         [HttpPost]
         [DisableFormValueModelBinding]
         [DisableRequestSizeLimit]
