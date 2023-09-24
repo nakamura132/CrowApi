@@ -62,13 +62,14 @@ namespace CrowApi.Services
                         //
                         // *** 例外再スローの注意点   正しい : throw;   良くない : throw ex;   ⇒スタックトレースがリセットされてしまう ***
                         throw;
+
                     }
                 }
                 else
                 {
                     // ファイル保存用ディレクトリの作成が禁止されている
-                    _logger.LogError( "prohibited to create a directory for saving files." );
-                    throw new Exception( "内部サーバーエラー: prohibited to create a directory for saving files." );
+                    _logger.LogError( "prohibited creating a directory for saving files." );
+                    throw new Exception( "内部サーバーエラー: prohibited creating a directory for saving files." );
                 }
             }
             var saveToPath = Path.Combine(saveDirectoryName, fileName);
